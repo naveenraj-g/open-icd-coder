@@ -1,0 +1,129 @@
+# Application-behavior config. Checked into git — not a secret. True
+# per-environment secrets (DB URL) live in .env, never here. Precedence,
+# highest first: real env var > .env > this file > field defaults — see
+# app/core/config.py's Settings.settings_customise_sources().
+
+logging:
+  # DEBUG | INFO | WARNING | ERROR | CRITICAL
+  level: INFO
+
+  # "json" (one JSON object per line) or "console" (human-readable).
+  format: console
+
+  # Any SQL statement slower than this emits a `db.slow_query` WARNING.
+  slow_query_ms: 500
+
+  # Log every SQL statement at DEBUG (very noisy — debugging only).
+  sql_echo: false
+
+cors:
+  # Origins allowed to call the API from a browser (the review UI).
+  allow_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+
+search:
+  # Page size used when the caller doesn't pass ?limit=
+  default_limit: 20
+  # Hard cap on ?limit= for /terminology/search
+  max_limit: 100
+  # Mode used when the caller doesn't pass ?mode= — text | semantic | hybrid.
+  # hybrid found the right code family in the top 10 for 15/15 test queries
+  # (text 9/15, semantic 11/15). semantic/hybrid need LM Studio running; set
+  # "text" to work without it.
+  default_mode: hybrid
+  # Also match ICD-10-CM Alphabetic Index terms (synonyms, eponyms, "see"
+  # cross-references) — needs `just terminology-index`.
+  use_index_terms: true
+  # Merge codes differing only in the 7th character (S72.92XA / XD / XS) into
+  # one hit with `variants` — frees candidate slots (Report 01, F6).
+  collapse_variants: true
+  # Candidates fetched per source per method before merging and collapsing.
+  candidate_pool: 200
+  # How text search treats query words: all | any | fallback.
+  # "any"/"fallback" let long note sentences match in text search, but flood
+  # hybrid with generic hits ("Devic's disease" -> every "... disease") and
+  # cut held-out R@100 94% -> 91-92% (Report 03). Rejected: "all".
+  text_match: all
+  # An index term that merely CONTAINS the query ("...caffeine with
+  # dependence") ranks below one that IS it (Report 02 F5). Adopted in
+  # Report 03: R@1 47% -> 49%, MRR 0.58 -> 0.59, recall unchanged.
+  index_length_penalty: true
+  # Weighted RRF: how much text counts relative to semantic (1.0). Dev tuning
+  # (eval/tune_fusion.py) raised MRR but every tuned weight lowered held-out
+  # R@100 on the test set (Report 03). Rejected: equal weights.
+  hybrid_text_weight: 1.0
+
+coding:
+  # Item types that get searched + scored. The API also accepts observations,
+  # service_requests and medication_requests — stored, marked not_coded.
+  # Prototype: conditions only (ICD-10-CM); others later with SNOMED/LOINC/RxNorm.
+  coded_item_types: [condition]
+  # Hybrid-search candidates stored per item and scored by the decision engine.
+  candidates_per_item: 100
+  # Ranked alternatives shown under each assigned code.
+  alternatives_shown: 15
+  # Assigned probability below this -> LOW_CONFIDENCE -> encounter to close review.
+  low_confidence_threshold: 0.75
+  # "None of the above" probability at/above this -> NONE_OF_THE_ABOVE flag.
+  nota_flag_threshold: 0.2
+  # jev = Jev via jev.route (OpenCode Zen). search-rank = uncalibrated stand-in.
+  default_engine: jev
+
+jev:
+  # Jev (TypeSafe AI) decision engine. Two routes, same request/answer shape:
+  #   opencode  OpenCode Zen   — key OPENCODE_API_KEY in backend/.env
+  #   vercel    AI Gateway     — key AI_GATEWAY_API_KEY in backend/.env
+  # Engine "jev" uses `route`; "jev-opencode" / "jev-vercel" pick one explicitly.
+  # Select per request with ?engine=..., or set coding.default_engine: jev.
+  route: opencode
+  routes:
+    opencode:
+      base_url: https://opencode.ai/zen/v1
+      path: /systemone
+      # jev-1.13 = paid; OpenCode's docs state a zero-retention policy for paid
+      # models. jev-1.13-free = free, but prompts MAY BE USED FOR TRAINING —
+      # synthetic test data only, never real patient notes.
+      # ⚠ Currently the FREE model (prompts may be used for training) — use
+      # synthetic notes only. Switch to jev-1.13 before any real patient data.
+      model: jev-1.13-free
+      api_key_setting: OPENCODE_API_KEY
+      input_price_per_million: 0.042
+    vercel:
+      base_url: https://ai-gateway.vercel.sh/v1
+      path: /evaluate
+      model: typesafe-ai/jev
+      api_key_setting: AI_GATEWAY_API_KEY
+      input_price_per_million: 0.042
+      supports_zdr_option: true
+  timeout_seconds: 60
+  max_retries: 2            # 429 / 5xx / network only
+  retry_backoff_seconds: 1
+  # Vercel route only. Jev's gateway listing reports zdr "none", so this may
+  # make requests fail — check with `just jev-check`.
+  zero_data_retention: false
+  include_none_of_the_above: true
+
+terminology:
+  # Percent of ICD-10-CM Alphabetic Index terms held OUT of search, so the
+  # evaluation (backend/eval) can query them without testing on text search
+  # already contains. The split is a stable hash of the term text.
+  # Prototype: 20. For production: 0, then re-run `just terminology-index`.
+  # Changing it requires re-running the index load AND `just eval-build`.
+  index_holdout_percent: 20
+
+embedding:
+  # OpenAI-compatible /embeddings endpoint — LM Studio's local server.
+  base_url: http://localhost:1234/v1
+  model: text-embedding-qwen3-embedding-0.6b
+  # Must match the vector(N) column. Changing model/dimensions = new migration.
+  dimensions: 1024
+  # Prepended to search queries only (Qwen3-Embedding is instruction-aware).
+  query_instruction: "Instruct: Given a clinical phrase, retrieve the matching ICD-10-CM diagnosis\nQuery: "
+  # Bulk job tuning. Measured on RX 6600 + LM Studio: ~25 texts/s at 4 x 64.
+  batch_size: 64
+  concurrency: 4
+  timeout_seconds: 300
+  # LM Studio sometimes returns a transient 400/5xx while (un)loading models.
+  max_retries: 3
+  retry_backoff_seconds: 2

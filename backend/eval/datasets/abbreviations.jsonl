@@ -1,0 +1,30 @@
+{"id": "abbreviations-001", "query": "MI", "gold": ["I21"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-002", "query": "HTN", "gold": ["I10"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-003", "query": "T2DM", "gold": ["E11"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-004", "query": "T1DM", "gold": ["E10"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-005", "query": "CHF", "gold": ["I50"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-006", "query": "COPD", "gold": ["J44"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-007", "query": "UTI", "gold": ["N39.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-008", "query": "DVT", "gold": ["I82.4"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-009", "query": "PE", "gold": ["I26"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-010", "query": "GERD", "gold": ["K21"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "abbreviations-011", "query": "CAD", "gold": ["I25.1"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-012", "query": "AFib", "gold": ["I48"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-013", "query": "CKD", "gold": ["N18"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-014", "query": "AKI", "gold": ["N17"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-015", "query": "TIA", "gold": ["G45"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-016", "query": "BPH", "gold": ["N40"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-017", "query": "OSA", "gold": ["G47.33"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-018", "query": "URI", "gold": ["J06"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-019", "query": "CAP", "gold": ["J18"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-020", "query": "SOB", "gold": ["R06.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-021", "query": "N/V", "gold": ["R11"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-022", "query": "ADHD", "gold": ["F90"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-023", "query": "OCD", "gold": ["F42"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-024", "query": "PTSD", "gold": ["F43.1"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-025", "query": "MDD", "gold": ["F32", "F33"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-026", "query": "RA", "gold": ["M05", "M06"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-027", "query": "OA knee", "gold": ["M17"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-028", "query": "IBS", "gold": ["K58"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-029", "query": "SLE", "gold": ["M32"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "abbreviations-030", "query": "HIV", "gold": ["B20"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}

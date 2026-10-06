@@ -1,0 +1,26 @@
+name: jev-coding
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: jev-coding-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-jev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jev_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-jev_coding}
+    ports:
+      # Bound to localhost only; the prototype DB should not be reachable from the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Scripts here run once, on first start with an empty volume.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

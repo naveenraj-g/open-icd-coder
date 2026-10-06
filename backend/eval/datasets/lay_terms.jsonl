@@ -1,0 +1,40 @@
+{"id": "lay_terms-001", "query": "heart attack", "gold": ["I21"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-002", "query": "high blood pressure", "gold": ["I10"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-003", "query": "sugar diabetes", "gold": ["E11"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-004", "query": "stroke", "gold": ["I63"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-005", "query": "mini stroke", "gold": ["G45"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-006", "query": "flu", "gold": ["J10", "J11"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-007", "query": "common cold", "gold": ["J00"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-008", "query": "pink eye", "gold": ["H10"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-009", "query": "heartburn", "gold": ["R12"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-010", "query": "acid reflux", "gold": ["K21"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-011", "query": "kidney stones", "gold": ["N20"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-012", "query": "bladder infection", "gold": ["N30", "N39.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-013", "query": "low thyroid", "gold": ["E03"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-014", "query": "overactive thyroid", "gold": ["E05"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-015", "query": "broken wrist", "gold": ["S62", "S52.5", "S52.6"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-016", "query": "broken ankle", "gold": ["S82.5", "S82.6", "S82.8"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-017", "query": "chest pain", "gold": ["R07"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-018", "query": "shortness of breath", "gold": ["R06.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-019", "query": "stomach ache", "gold": ["R10"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-020", "query": "sore throat", "gold": ["J02", "R07.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-021", "query": "ear infection", "gold": ["H65", "H66"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-022", "query": "sinus infection", "gold": ["J01", "J32"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-023", "query": "nosebleed", "gold": ["R04.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-024", "query": "hives", "gold": ["L50"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-025", "query": "cold sore", "gold": ["B00.1"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-026", "query": "shingles", "gold": ["B02"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-027", "query": "chickenpox", "gold": ["B01"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-028", "query": "bed sore", "gold": ["L89"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-029", "query": "blood clot in the leg", "gold": ["I82.4"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-030", "query": "blood clot in the lung", "gold": ["I26"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-031", "query": "enlarged prostate", "gold": ["N40"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-032", "query": "fainting", "gold": ["R55"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-033", "query": "dizziness", "gold": ["R42"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-034", "query": "pins and needles", "gold": ["R20.2"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-035", "query": "lazy eye", "gold": ["H53.0"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-036", "query": "whooping cough", "gold": ["A37"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-037", "query": "lockjaw", "gold": ["A35"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}
+{"id": "lay_terms-038", "query": "tennis elbow", "gold": ["M77.1"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-039", "query": "yellow skin", "gold": ["R17"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": false}}
+{"id": "lay_terms-040", "query": "hay fever", "gold": ["J30"], "source": "hand-written", "meta": {"labeled_by": "author — needs clinical review", "is_loaded_index_term": true}}

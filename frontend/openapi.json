@@ -1,0 +1,2193 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Open ICD Coder API",
+  "description": "Prototype backend for AI-augmented medical coding: ICD-10-CM terminology search (Stage 1) and the coding pipeline \u2014 candidates, decision engine, human review (Stages 2-4). See docs/goal.md.",
+  "version": "0.1.0"
+ },
+ "paths": {
+  "/api/v1/terminology/code-systems": {
+   "get": {
+    "tags": [
+     "Terminology"
+    ],
+    "summary": "List loaded code systems",
+    "description": "Every loaded code system release with its concept count.",
+    "operationId": "list_terminology_code_systems",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CodeSystemListResponse"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/terminology/search": {
+   "get": {
+    "tags": [
+     "Terminology"
+    ],
+    "summary": "Search codes by code or text",
+    "description": "Code-shaped queries ('K35', 'k3530', 'K35.3') always return codes with that prefix in tabular order. Otherwise `mode` picks the method:\n\n- **text** \u2014 PostgreSQL full-text search (word stems, any order) + trigram similarity (typos) over the description and inclusion terms.\n- **semantic** \u2014 nearest codes by embedding similarity (pgvector); finds lay wording like 'heart attack'. Needs the embedding server.\n- **hybrid** \u2014 both rankings merged with reciprocal rank fusion; each hit reports its `text_rank` and `semantic_rank`.",
+    "operationId": "search_terminology_concepts",
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 200,
+       "description": "e.g. 'acute appendicitis with localized peritonitis', 'heart attack' or 'K35.3'",
+       "title": "Q"
+      },
+      "description": "e.g. 'acute appendicitis with localized peritonitis', 'heart attack' or 'K35.3'"
+     },
+     {
+      "name": "mode",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "enum": [
+        "text",
+        "semantic",
+        "hybrid"
+       ],
+       "type": "string",
+       "description": "text | semantic | hybrid (default from configs/config.yaml)",
+       "default": "hybrid",
+       "title": "Mode"
+      },
+      "description": "text | semantic | hybrid (default from configs/config.yaml)"
+     },
+     {
+      "name": "system",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Code system canonical URL",
+       "default": "http://hl7.org/fhir/sid/icd-10-cm",
+       "title": "System"
+      },
+      "description": "Code system canonical URL"
+     },
+     {
+      "name": "version",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Release, e.g. '2027'. Default: latest loaded",
+       "title": "Version"
+      },
+      "description": "Release, e.g. '2027'. Default: latest loaded"
+     },
+     {
+      "name": "billable_only",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "boolean",
+       "description": "Exclude non-billable category headers",
+       "default": false,
+       "title": "Billable Only"
+      },
+      "description": "Exclude non-billable category headers"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 100,
+       "minimum": 1,
+       "default": 20,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SearchResponse"
+        }
+       }
+      }
+     },
+     "503": {
+      "description": "Embedding server unreachable (semantic/hybrid)"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/terminology/concepts/{code}": {
+   "get": {
+    "tags": [
+     "Terminology"
+    ],
+    "summary": "Get one code with its hierarchy and notes",
+    "description": "Accepts dotted or undotted ICD-10-CM codes ('K35.30' or 'K3530'). Returns the parent, direct children, inclusion terms and tabular notes (excludes1/2, code first, use additional code, 7th character), plus `inherited_notes` from ancestor categories, which apply to this code too.",
+    "operationId": "get_terminology_concept",
+    "parameters": [
+     {
+      "name": "code",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Code"
+      }
+     },
+     {
+      "name": "system",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "string",
+       "description": "Code system canonical URL",
+       "default": "http://hl7.org/fhir/sid/icd-10-cm",
+       "title": "System"
+      },
+      "description": "Code system canonical URL"
+     },
+     {
+      "name": "version",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Release, e.g. '2027'. Default: latest loaded",
+       "title": "Version"
+      },
+      "description": "Release, e.g. '2027'. Default: latest loaded"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConceptDetailResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Code or code system not found"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/coding/settings": {
+   "get": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Decision engines and coding thresholds",
+    "description": "Engines selectable with ?engine=, the default, and the thresholds that set flags.",
+    "operationId": "get_coding_settings",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CodingSettings"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters": {
+   "post": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Submit a SOAP note and its findings for coding",
+    "description": "Stores the encounter, then for every coded item (coding.coded_item_types \u2014 conditions in the prototype): hybrid search -> top candidates -> decision engine probabilities -> assigned code + flags. Other item types are stored as not_coded. Runs synchronously and returns the coded encounter.",
+    "operationId": "create_coding_encounter",
+    "parameters": [
+     {
+      "name": "engine",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Decision engine (default: coding.default_engine in configs/config.yaml)",
+       "examples": [
+        "search-rank"
+       ],
+       "title": "Engine"
+      },
+      "description": "Decision engine (default: coding.default_engine in configs/config.yaml)"
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EncounterCreate"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterOut"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Encounter already exists"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   },
+   "get": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "List encounters (review queue)",
+    "operationId": "list_coding_encounters",
+    "parameters": [
+     {
+      "name": "queue",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "standard | close_review",
+       "title": "Queue"
+      },
+      "description": "standard | close_review"
+     },
+     {
+      "name": "status",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "processing | ready_for_review | reviewed | failed",
+       "title": "Status"
+      },
+      "description": "processing | ready_for_review | reviewed | failed"
+     },
+     {
+      "name": "reviewed",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "boolean"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Filter on isHumanReviewed",
+       "title": "Reviewed"
+      },
+      "description": "Filter on isHumanReviewed"
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "maximum": 200,
+       "minimum": 1,
+       "default": 50,
+       "title": "Limit"
+      }
+     },
+     {
+      "name": "offset",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0,
+       "title": "Offset"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterListResponse"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters/{encounter_id}": {
+   "get": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Get a coded encounter",
+    "description": "Each coded item's ai_classification (assigned code, probability, flags, ranked alternatives) beside its human review, plus the encounter audit_trail.",
+    "operationId": "get_coding_encounter",
+    "parameters": [
+     {
+      "name": "encounter_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Encounter Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterOut"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Encounter not found"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters/{encounter_id}/items/{item_id}/candidates": {
+   "get": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "All search candidates for one item, with probabilities",
+    "description": "The full top-N the decision engine scored (not just the alternatives shown on the encounter), in search order: search rank/score, text and semantic ranks, matched index term, and the active decision's probability and rank.",
+    "operationId": "get_coding_item_candidates",
+    "parameters": [
+     {
+      "name": "encounter_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Encounter Id"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ItemCandidatesResponse"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Encounter or item not found"
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters/{encounter_id}/items/{item_id}/review": {
+   "post": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Approve, override or remove one item's code",
+    "description": "approve = accept the assigned code \u00b7 override = replace it with `code` (any billable ICD-10-CM code) \u00b7 remove = don't bill this item. The AI's assignment is kept alongside; every action is audited.",
+    "operationId": "review_coding_item",
+    "parameters": [
+     {
+      "name": "encounter_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Encounter Id"
+      }
+     },
+     {
+      "name": "item_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "integer",
+       "title": "Item Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ItemReview"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterOut"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Encounter or item not found"
+     },
+     "422": {
+      "description": "Not allowed in the current state"
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters/{encounter_id}/approve": {
+   "post": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Approve the encounter (isHumanReviewed = true)",
+    "description": "Allowed once every coded item is approved, overridden or removed.",
+    "operationId": "approve_coding_encounter",
+    "parameters": [
+     {
+      "name": "encounter_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Encounter Id"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EncounterApprove"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterOut"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Encounter not found"
+     },
+     "422": {
+      "description": "Items still unreviewed, or already approved"
+     }
+    }
+   }
+  },
+  "/api/v1/coding/encounters/{encounter_id}/rescore": {
+   "post": {
+    "tags": [
+     "Coding"
+    ],
+    "summary": "Re-run a decision engine over the stored candidates",
+    "description": "No new search. Replaces each item's active decision and clears item reviews. Not allowed once the encounter is approved.",
+    "operationId": "rescore_coding_encounter",
+    "parameters": [
+     {
+      "name": "encounter_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "title": "Encounter Id"
+      }
+     },
+     {
+      "name": "engine",
+      "in": "query",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "description": "Decision engine (default: coding.default_engine in configs/config.yaml)",
+       "examples": [
+        "search-rank"
+       ],
+       "title": "Engine"
+      },
+      "description": "Decision engine (default: coding.default_engine in configs/config.yaml)"
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/EncounterOut"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation Error",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health": {
+   "get": {
+    "tags": [
+     "Health"
+    ],
+    "summary": "Liveness probe",
+    "description": "Returns 200 if the process is running. Does not check the database.",
+    "operationId": "health_check",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     }
+    }
+   }
+  },
+  "/health/ready": {
+   "get": {
+    "tags": [
+     "Health"
+    ],
+    "summary": "Readiness probe",
+    "description": "Returns 200 only when the database is reachable.",
+    "operationId": "readiness_check",
+    "responses": {
+     "200": {
+      "description": "Successful Response",
+      "content": {
+       "application/json": {
+        "schema": {}
+       }
+      }
+     },
+     "503": {
+      "description": "Database unavailable"
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {
+   "AIClassification": {
+    "properties": {
+     "engine": {
+      "type": "string",
+      "title": "Engine"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "assigned_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assigned Code"
+     },
+     "assigned_description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Assigned Description"
+     },
+     "probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Probability"
+     },
+     "none_of_the_above_probability": {
+      "type": "number",
+      "title": "None Of The Above Probability"
+     },
+     "flags": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Flags"
+     },
+     "top_alternatives": {
+      "items": {
+       "$ref": "#/components/schemas/Alternative"
+      },
+      "type": "array",
+      "title": "Top Alternatives"
+     },
+     "candidates_scored": {
+      "type": "integer",
+      "title": "Candidates Scored"
+     },
+     "latency_ms": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Latency Ms"
+     }
+    },
+    "type": "object",
+    "required": [
+     "engine",
+     "assigned_code",
+     "assigned_description",
+     "probability",
+     "none_of_the_above_probability",
+     "flags",
+     "top_alternatives",
+     "candidates_scored"
+    ],
+    "title": "AIClassification"
+   },
+   "Alternative": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "probability": {
+      "type": "number",
+      "title": "Probability"
+     },
+     "search_rank": {
+      "type": "integer",
+      "title": "Search Rank"
+     },
+     "matched_on": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Matched On"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "description",
+     "probability",
+     "search_rank"
+    ],
+    "title": "Alternative"
+   },
+   "AuditTrail": {
+    "properties": {
+     "isHumanReviewed": {
+      "type": "boolean",
+      "title": "Ishumanreviewed"
+     },
+     "reviewed_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     },
+     "final_billing_codes": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Final Billing Codes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "isHumanReviewed",
+     "final_billing_codes"
+    ],
+    "title": "AuditTrail"
+   },
+   "CandidateOut": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "description": {
+      "type": "string",
+      "title": "Description"
+     },
+     "search_rank": {
+      "type": "integer",
+      "title": "Search Rank"
+     },
+     "search_score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Search Score"
+     },
+     "text_rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Text Rank"
+     },
+     "semantic_rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Semantic Rank"
+     },
+     "matched_on": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Matched On"
+     },
+     "variants": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Variants",
+      "default": []
+     },
+     "probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Probability"
+     },
+     "probability_rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Probability Rank"
+     },
+     "is_assigned": {
+      "type": "boolean",
+      "title": "Is Assigned"
+     },
+     "is_final": {
+      "type": "boolean",
+      "title": "Is Final"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "description",
+     "search_rank",
+     "is_assigned",
+     "is_final"
+    ],
+    "title": "CandidateOut",
+    "description": "One stored search candidate for an item, with the active decision's\nprobability for it."
+   },
+   "ClinicalInput": {
+    "properties": {
+     "soap_note": {
+      "type": "string",
+      "title": "Soap Note"
+     },
+     "department": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Department"
+     }
+    },
+    "type": "object",
+    "required": [
+     "soap_note"
+    ],
+    "title": "ClinicalInput"
+   },
+   "ClinicalItemIn": {
+    "properties": {
+     "text": {
+      "type": "string",
+      "maxLength": 500,
+      "minLength": 1,
+      "title": "Text",
+      "examples": [
+       "acute appendicitis with localized peritonitis"
+      ]
+     },
+     "details": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Details"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "text"
+    ],
+    "title": "ClinicalItemIn",
+    "description": "One finding from the note \u2014 already extracted upstream (Stage 0 is\nout of scope here). `text` is what gets searched; `details` keeps the\nrest of the source record (status, value, dose, dates \u2026) untouched."
+   },
+   "CodeSystemListResponse": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/CodeSystemResponse"
+      },
+      "type": "array",
+      "title": "Data"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "data"
+    ],
+    "title": "CodeSystemListResponse"
+   },
+   "CodeSystemResponse": {
+    "properties": {
+     "id": {
+      "type": "integer",
+      "title": "Id"
+     },
+     "canonical_url": {
+      "type": "string",
+      "title": "Canonical Url"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "title": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Title"
+     },
+     "publisher": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Publisher"
+     },
+     "active": {
+      "type": "boolean",
+      "title": "Active"
+     },
+     "concept_count": {
+      "type": "integer",
+      "title": "Concept Count"
+     },
+     "embedded_count": {
+      "type": "integer",
+      "title": "Embedded Count"
+     },
+     "index_term_count": {
+      "type": "integer",
+      "title": "Index Term Count"
+     },
+     "index_terms_embedded": {
+      "type": "integer",
+      "title": "Index Terms Embedded"
+     },
+     "embedding_model": {
+      "type": "string",
+      "title": "Embedding Model"
+     }
+    },
+    "type": "object",
+    "required": [
+     "id",
+     "canonical_url",
+     "version",
+     "name",
+     "active",
+     "concept_count",
+     "embedded_count",
+     "index_term_count",
+     "index_terms_embedded",
+     "embedding_model"
+    ],
+    "title": "CodeSystemResponse"
+   },
+   "CodedItemOut": {
+    "properties": {
+     "item_id": {
+      "type": "integer",
+      "title": "Item Id"
+     },
+     "item_type": {
+      "type": "string",
+      "title": "Item Type"
+     },
+     "sequence": {
+      "type": "integer",
+      "title": "Sequence"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "details": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Details"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "error": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Error"
+     },
+     "ai_classification": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/AIClassification"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "review": {
+      "$ref": "#/components/schemas/ItemReviewState"
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_id",
+     "item_type",
+     "sequence",
+     "text",
+     "status",
+     "review"
+    ],
+    "title": "CodedItemOut"
+   },
+   "CodingSettings": {
+    "properties": {
+     "default_engine": {
+      "type": "string",
+      "title": "Default Engine"
+     },
+     "engines": {
+      "items": {
+       "$ref": "#/components/schemas/EngineInfo"
+      },
+      "type": "array",
+      "title": "Engines"
+     },
+     "coded_item_types": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Coded Item Types"
+     },
+     "candidates_per_item": {
+      "type": "integer",
+      "title": "Candidates Per Item"
+     },
+     "alternatives_shown": {
+      "type": "integer",
+      "title": "Alternatives Shown"
+     },
+     "low_confidence_threshold": {
+      "type": "number",
+      "title": "Low Confidence Threshold"
+     },
+     "nota_flag_threshold": {
+      "type": "number",
+      "title": "Nota Flag Threshold"
+     }
+    },
+    "type": "object",
+    "required": [
+     "default_engine",
+     "engines",
+     "coded_item_types",
+     "candidates_per_item",
+     "alternatives_shown",
+     "low_confidence_threshold",
+     "nota_flag_threshold"
+    ],
+    "title": "CodingSettings"
+   },
+   "ConceptDetailResponse": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "display": {
+      "type": "string",
+      "title": "Display"
+     },
+     "short_display": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Short Display"
+     },
+     "is_billable": {
+      "type": "boolean",
+      "title": "Is Billable"
+     },
+     "system": {
+      "type": "string",
+      "title": "System"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "parent": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/ConceptSummary"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "children": {
+      "items": {
+       "$ref": "#/components/schemas/ConceptSummary"
+      },
+      "type": "array",
+      "title": "Children"
+     },
+     "synonyms": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Synonyms"
+     },
+     "notes": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Notes"
+     },
+     "inherited_notes": {
+      "items": {
+       "$ref": "#/components/schemas/InheritedNotes"
+      },
+      "type": "array",
+      "title": "Inherited Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "display",
+     "is_billable",
+     "system",
+     "version",
+     "children",
+     "synonyms",
+     "notes",
+     "inherited_notes"
+    ],
+    "title": "ConceptDetailResponse"
+   },
+   "ConceptSummary": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "display": {
+      "type": "string",
+      "title": "Display"
+     },
+     "short_display": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Short Display"
+     },
+     "is_billable": {
+      "type": "boolean",
+      "title": "Is Billable"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "display",
+     "is_billable"
+    ],
+    "title": "ConceptSummary"
+   },
+   "EncounterApprove": {
+    "properties": {
+     "reviewer": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Reviewer"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "reviewer"
+    ],
+    "title": "EncounterApprove"
+   },
+   "EncounterCreate": {
+    "properties": {
+     "encounter_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Encounter Id",
+      "examples": [
+       "enc_2026_98312A"
+      ]
+     },
+     "patient_id": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Patient Id",
+      "examples": [
+       "pat_4412"
+      ]
+     },
+     "department": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 200
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Department",
+      "examples": [
+       "Emergency Medicine"
+      ]
+     },
+     "soap_note": {
+      "type": "string",
+      "maxLength": 50000,
+      "minLength": 1,
+      "title": "Soap Note"
+     },
+     "conditions": {
+      "items": {
+       "$ref": "#/components/schemas/ClinicalItemIn"
+      },
+      "type": "array",
+      "title": "Conditions"
+     },
+     "observations": {
+      "items": {
+       "$ref": "#/components/schemas/ClinicalItemIn"
+      },
+      "type": "array",
+      "title": "Observations"
+     },
+     "service_requests": {
+      "items": {
+       "$ref": "#/components/schemas/ClinicalItemIn"
+      },
+      "type": "array",
+      "title": "Service Requests"
+     },
+     "medication_requests": {
+      "items": {
+       "$ref": "#/components/schemas/ClinicalItemIn"
+      },
+      "type": "array",
+      "title": "Medication Requests"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "encounter_id",
+     "patient_id",
+     "soap_note"
+    ],
+    "title": "EncounterCreate"
+   },
+   "EncounterListResponse": {
+    "properties": {
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "limit": {
+      "type": "integer",
+      "title": "Limit"
+     },
+     "offset": {
+      "type": "integer",
+      "title": "Offset"
+     },
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/EncounterSummary"
+      },
+      "type": "array",
+      "title": "Data"
+     }
+    },
+    "type": "object",
+    "required": [
+     "total",
+     "limit",
+     "offset",
+     "data"
+    ],
+    "title": "EncounterListResponse"
+   },
+   "EncounterOut": {
+    "properties": {
+     "encounter_id": {
+      "type": "string",
+      "title": "Encounter Id"
+     },
+     "patient_id": {
+      "type": "string",
+      "title": "Patient Id"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "review_queue": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Queue"
+     },
+     "clinical_input": {
+      "$ref": "#/components/schemas/ClinicalInput"
+     },
+     "coded_concepts": {
+      "items": {
+       "$ref": "#/components/schemas/CodedItemOut"
+      },
+      "type": "array",
+      "title": "Coded Concepts"
+     },
+     "audit_trail": {
+      "$ref": "#/components/schemas/AuditTrail"
+     },
+     "created_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "encounter_id",
+     "patient_id",
+     "status",
+     "clinical_input",
+     "coded_concepts",
+     "audit_trail"
+    ],
+    "title": "EncounterOut"
+   },
+   "EncounterSummary": {
+    "properties": {
+     "encounter_id": {
+      "type": "string",
+      "title": "Encounter Id"
+     },
+     "patient_id": {
+      "type": "string",
+      "title": "Patient Id"
+     },
+     "department": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Department"
+     },
+     "status": {
+      "type": "string",
+      "title": "Status"
+     },
+     "review_queue": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Review Queue"
+     },
+     "is_human_reviewed": {
+      "type": "boolean",
+      "title": "Is Human Reviewed"
+     },
+     "items": {
+      "type": "integer",
+      "title": "Items"
+     },
+     "flagged_items": {
+      "type": "integer",
+      "title": "Flagged Items"
+     },
+     "created_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Created At"
+     }
+    },
+    "type": "object",
+    "required": [
+     "encounter_id",
+     "patient_id",
+     "status",
+     "is_human_reviewed",
+     "items",
+     "flagged_items"
+    ],
+    "title": "EncounterSummary"
+   },
+   "EngineInfo": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "title": "Name"
+     },
+     "engine": {
+      "type": "string",
+      "title": "Engine"
+     },
+     "kind": {
+      "type": "string",
+      "enum": [
+       "decision_model",
+       "stand_in"
+      ],
+      "title": "Kind"
+     },
+     "route": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Route"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "is_default": {
+      "type": "boolean",
+      "title": "Is Default"
+     },
+     "warning": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Warning"
+     }
+    },
+    "type": "object",
+    "required": [
+     "name",
+     "engine",
+     "kind",
+     "is_default"
+    ],
+    "title": "EngineInfo"
+   },
+   "HTTPValidationError": {
+    "properties": {
+     "detail": {
+      "items": {
+       "$ref": "#/components/schemas/ValidationError"
+      },
+      "type": "array",
+      "title": "Detail"
+     }
+    },
+    "type": "object",
+    "title": "HTTPValidationError"
+   },
+   "InheritedNotes": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "display": {
+      "type": "string",
+      "title": "Display"
+     },
+     "notes": {
+      "additionalProperties": {
+       "items": {
+        "type": "string"
+       },
+       "type": "array"
+      },
+      "type": "object",
+      "title": "Notes"
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "display",
+     "notes"
+    ],
+    "title": "InheritedNotes",
+    "description": "Notes declared on an ancestor category, which apply to this code too."
+   },
+   "ItemCandidatesResponse": {
+    "properties": {
+     "encounter_id": {
+      "type": "string",
+      "title": "Encounter Id"
+     },
+     "item_id": {
+      "type": "integer",
+      "title": "Item Id"
+     },
+     "text": {
+      "type": "string",
+      "title": "Text"
+     },
+     "search_query": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Search Query"
+     },
+     "engine": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Engine"
+     },
+     "model": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Model"
+     },
+     "none_of_the_above_probability": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "None Of The Above Probability"
+     },
+     "final_code_not_in_candidates": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Final Code Not In Candidates"
+     },
+     "total": {
+      "type": "integer",
+      "title": "Total"
+     },
+     "candidates": {
+      "items": {
+       "$ref": "#/components/schemas/CandidateOut"
+      },
+      "type": "array",
+      "title": "Candidates"
+     }
+    },
+    "type": "object",
+    "required": [
+     "encounter_id",
+     "item_id",
+     "text",
+     "total",
+     "candidates"
+    ],
+    "title": "ItemCandidatesResponse"
+   },
+   "ItemReview": {
+    "properties": {
+     "action": {
+      "type": "string",
+      "enum": [
+       "approve",
+       "override",
+       "remove"
+      ],
+      "title": "Action"
+     },
+     "reviewer": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Reviewer"
+     },
+     "code": {
+      "anyOf": [
+       {
+        "type": "string",
+        "maxLength": 10
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Code"
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "action",
+     "reviewer"
+    ],
+    "title": "ItemReview"
+   },
+   "ItemReviewState": {
+    "properties": {
+     "action": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Action"
+     },
+     "final_code": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Final Code"
+     },
+     "final_description": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Final Description"
+     },
+     "reviewed_by": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed By"
+     },
+     "reviewed_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "format": "date-time"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reviewed At"
+     }
+    },
+    "type": "object",
+    "title": "ItemReviewState"
+   },
+   "SearchHit": {
+    "properties": {
+     "code": {
+      "type": "string",
+      "title": "Code"
+     },
+     "display": {
+      "type": "string",
+      "title": "Display"
+     },
+     "short_display": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Short Display"
+     },
+     "is_billable": {
+      "type": "boolean",
+      "title": "Is Billable"
+     },
+     "score": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Score"
+     },
+     "text_rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Text Rank"
+     },
+     "semantic_rank": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Semantic Rank"
+     },
+     "matched_on": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Matched On"
+     },
+     "variants": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Variants",
+      "default": []
+     }
+    },
+    "type": "object",
+    "required": [
+     "code",
+     "display",
+     "is_billable"
+    ],
+    "title": "SearchHit"
+   },
+   "SearchResponse": {
+    "properties": {
+     "system": {
+      "type": "string",
+      "title": "System"
+     },
+     "version": {
+      "type": "string",
+      "title": "Version"
+     },
+     "query": {
+      "type": "string",
+      "title": "Query"
+     },
+     "match_type": {
+      "type": "string",
+      "enum": [
+       "code",
+       "text",
+       "semantic",
+       "hybrid"
+      ],
+      "title": "Match Type"
+     },
+     "total": {
+      "anyOf": [
+       {
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Total"
+     },
+     "limit": {
+      "type": "integer",
+      "title": "Limit"
+     },
+     "offset": {
+      "type": "integer",
+      "title": "Offset"
+     },
+     "data": {
+      "items": {
+       "$ref": "#/components/schemas/SearchHit"
+      },
+      "type": "array",
+      "title": "Data"
+     }
+    },
+    "type": "object",
+    "required": [
+     "system",
+     "version",
+     "query",
+     "match_type",
+     "total",
+     "limit",
+     "offset",
+     "data"
+    ],
+    "title": "SearchResponse"
+   },
+   "ValidationError": {
+    "properties": {
+     "loc": {
+      "items": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "integer"
+        }
+       ]
+      },
+      "type": "array",
+      "title": "Location"
+     },
+     "msg": {
+      "type": "string",
+      "title": "Message"
+     },
+     "type": {
+      "type": "string",
+      "title": "Error Type"
+     },
+     "input": {
+      "title": "Input"
+     },
+     "ctx": {
+      "type": "object",
+      "title": "Context"
+     }
+    },
+    "type": "object",
+    "required": [
+     "loc",
+     "msg",
+     "type"
+    ],
+    "title": "ValidationError"
+   }
+  }
+ }
+}
