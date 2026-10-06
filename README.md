@@ -8,7 +8,15 @@ A prototype that suggests **ICD-10-CM diagnosis codes** for the conditions in a 
 
 > ⚠️ **Prototype — not a medical device.** It is not validated for clinical or billing use. Use **synthetic or de-identified notes only**: notes are sent to a third-party API (Jev), and the default *free* tier may use prompts for training.
 
-<!-- Screenshot: add docs/images/encounter-review.png -->
+![Encounter review — each condition with its suggested code, Jev probability, flags, alternatives and the audit trail](docs/images/encounter-review.png)
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/dashboard.png" alt="Dashboard"><br><sub><b>Dashboard</b> — queue counts and recent encounters</sub></td>
+    <td width="33%"><img src="docs/images/new-encounter.png" alt="New encounter"><br><sub><b>New encounter</b> — SOAP note, findings, decision engine</sub></td>
+    <td width="33%"><img src="docs/images/system-status.png" alt="Status and engines"><br><sub><b>Status &amp; engines</b> — coverage, engines, thresholds</sub></td>
+  </tr>
+</table>
 
 ---
 
